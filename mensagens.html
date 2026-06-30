@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Mural de Mensagens Motivacionais</title>
+    <link rel="stylesheet" href="mensagens.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Mural de Mensagens Motivacionais</h1>
+        <p>Escreva uma mensagem de incentivo e compartilhe palavras positivas com todos.</p>
+
+        <div class="enviar_mensagem">
+            <form id="formMensagem">
+                <input type="hidden" id="mensagemId" name="mensagemId">
+                <textarea id="textoMensagem" name="texto" placeholder="Escreva uma mensagem motivacional..."></textarea>
+                <button type="submit" id="botaoEnviar">Enviar</button>
+            </form>
+        </div>
+
+        <div class="mural">
+            <h2>Mensagens:</h2>
+            <div id="listaMensagens"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById("formMensagem");
+        const textarea = document.getElementById("textoMensagem");
+        const inputId = document.getElementById("mensagemId");
+        const botaoEnviar = document.getElementById("botaoEnviar");
+        const listaMensagens = document.getElementById("listaMensagens");
+
+        let mensagemEmEdicao = null;
+
+        async function carregarMensagens() {
+            try {
+                const response = await fetch("/mensagens/api");
+
+                if (!response.ok) {
+                    throw new Error("Erro ao carregar mensagens");
+                }
+
+                const mensagens = await response.json();
+
+                if (!mensagens.length) {
+                    listaMensagens.innerHTML = '<p class="empty-state">Nenhuma mensagem registrada ainda.</p>';
+                    return;
+                }
+
+                listaMensagens.innerHTML = mensagens.map((mensagem) => `
+                    <div class="mensagem">
+                        <p>${mensagem.texto}</p>
+                        <div class="mensagem-acoes">
+                            <button type="button" class="btn-editar" data-id="${mensagem.id}">Editar</button>
+                            <button type="button" class="btn-excluir" data-id="${mensagem.id}">Excluir</button>
+                        </div>
+                    </div>
+                `).join("");
+            } catch (error) {
+                console.error(error);
+                listaMensagens.innerHTML = '<p class="empty-state">Não foi possível carregar as mensagens no momento.</p>';
+            }
+        }
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const texto = textarea.value.trim();
+            if (!texto) {
+                alert("Escreva algo antes de enviar.");
+                return;
+            }
+
+            if (mensagemEmEdicao) {
+                await fetch(`/mensagens/${mensagemEmEdicao}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ texto })
+                });
+            } else {
+                await fetch("/mensagens/add", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ texto })
+                });
+            }
+
+            textarea.value = "";
+            inputId.value = "";
+            botaoEnviar.textContent = "Enviar";
+            mensagemEmEdicao = null;
+            carregarMensagens();
+        });
+
+        listaMensagens.addEventListener("click", async (event) => {
+            const botao = event.target;
+
+            if (botao.classList.contains("btn-editar")) {
+                const id = botao.dataset.id;
+                const mensagem = (await fetch(`/mensagens/api`).then((res) => res.json())).find((item) => String(item.id) === id);
+
+                if (mensagem) {
+                    textarea.value = mensagem.texto;
+                    inputId.value = mensagem.id;
+                    botaoEnviar.textContent = "Salvar";
+                    mensagemEmEdicao = mensagem.id;
+                    textarea.focus();
+                }
+            }
+
+            if (botao.classList.contains("btn-excluir")) {
+                const id = botao.dataset.id;
+
+                if (confirm("Deseja realmente excluir esta mensagem?")) {
+                    await fetch(`/mensagens/${id}`, { method: "DELETE" });
+                    carregarMensagens();
+                }
+            }
+        });
+
+        carregarMensagens();
+    </script>
+</body>
+</html>
