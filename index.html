@@ -1,18 +1,123 @@
-<!DOCTYPE html> 
-<html lang = "pt-br"> 
-    <head>
-    <meta charset = "UTF-8" >
-    <tittle> Mural de desabafos </tittle> 
-        <link rel = "stylesheet" href = "style.css" </head>
-    <body> <div class = "container">
-        <h1>Mural de desabafos</h1>
-        <p>pode escrever aqui. Isso é anônimo e fica guardado para todos lerem<p>
-    <div class = "enviar_desabafo">
-                    <textarea id = "textoDesabafo" placeholder = "pode desabafar..."></textarea> 
-                    <button id = "btnEnviar">Enviar</button>
-                    
-                    </div> <div class = "mural"> <h2> Desabafos: </h2> <div id = "listaDesabafos"> </div> </div> </div> <script src = "script.js">
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mural de Desabafos</title>
+<style>
+body{background:#f3e8ff;font-family:Arial;padding:20px;margin:0}
+.container{max-width:700px;margin:auto}
+h1{color:#6d28d9;text-align:center}
+textarea{width:100%;height:100px;padding:10px;border:2px solid #a855f7;border-radius:10px;font-size:16px}
+button{background:#9333ea;color:white;border:none;padding:10px 20px;border-radius:8px;margin:10px 5px 0 0;font-size:16px}
+.post{background:white;padding:15px;border-radius:10px;margin:15px 0;border-left:4px solid #c4b5fd}
+.data{font-size:12px;color:#7c3aed;margin-top:8px}
+.badge{background:#f3e8ff;color:#6d28d9;padding:3px 8px;border-radius:5px;font-size:11px;margin-left:5px}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>💜 Mural de Desabafos</h1>
+<div style="background:white;padding:10px;border-radius:8px;margin-bottom:15px;font-size:14px">
+<strong>Aviso:</strong> Espaço de apoio. Em crise ligue 188
+</div>
+<textarea id="texto" placeholder="Desabafe aqui..."></textarea>
+<button onclick="salvar()" id="btnSalvar">Postar</button>
+<button onclick="cancelar()" id="btnCancelar" style="display:none">Cancelar</button>
+<div id="mural"></div>
+</div>
 
-                    </script>
-                </body>
-                    </html>
+<script>
+var editandoId = null;
+var desabafos = [];
+var idAtual = 1;
+
+if(localStorage.getItem('desabafos')) {
+  desabafos = JSON.parse(localStorage.getItem('desabafos'));
+}
+if(localStorage.getItem('idAtual')) {
+  idAtual = parseInt(localStorage.getItem('idAtual'));
+}
+
+function salvarLocal(){
+  localStorage.setItem('desabafos', JSON.stringify(desabafos));
+  localStorage.setItem('idAtual', idAtual);
+}
+
+function carregar(){
+  var html = '';
+  for(var i=0; i<desabafos.length; i++){
+    var d = desabafos[i];
+    var data = new Date(d.criado_em).toLocaleString('pt-BR');
+    var editado = '';
+    if(d.editado) editado = " <span class='badge'>editado</span>";
+
+    html = html + "<div class='post'>";
+    html = html + "<div>" + d.texto + "</div>";
+    html = html + "<div class='data'>" + data + editado + "<br>";
+    html = html + "<button onclick='editar(" + d.id + ")'>Editar</button>";
+    html = html + "<button onclick='deletar(" + d.id + ")'>Deletar</button>";
+    html = html + "</div></div>";
+  }
+  document.getElementById('mural').innerHTML = html;
+}
+
+function salvar(){
+  var t = document.getElementById('texto').value;
+  if(t.trim() == '') { alert('Escreva algo'); return; }
+
+  if(editandoId){
+    for(var i=0; i<desabafos.length; i++){
+      if(desabafos[i].id == editandoId){
+        desabafos[i].texto = t;
+        desabafos[i].editado = true;
+      }
+    }
+    editandoId = null;
+    document.getElementById('btnSalvar').innerText='Postar';
+    document.getElementById('btnCancelar').style.display='none';
+  }else{
+    var novo = {id:idAtual, texto:t, criado_em:new Date().toISOString(), editado:false};
+    idAtual = idAtual + 1;
+    desabafos.unshift(novo);
+  }
+
+  salvarLocal();
+  document.getElementById('texto').value='';
+  carregar();
+}
+
+function editar(id){
+  for(var i=0; i<desabafos.length; i++){
+    if(desabafos[i].id == id){
+      editandoId = id;
+      document.getElementById('texto').value = desabafos[i].texto;
+      document.getElementById('btnSalvar').innerText = 'Salvar';
+      document.getElementById('btnCancelar').style.display = 'inline';
+    }
+  }
+}
+
+function cancelar(){
+  editandoId=null;
+  document.getElementById('texto').value='';
+  document.getElementById('btnSalvar').innerText='Postar';
+  document.getElementById('btnCancelar').style.display='none';
+}
+
+function deletar(id){
+  if(confirm('Deletar?')){
+    var novo = [];
+    for(var i=0; i<desabafos.length; i++){
+      if(desabafos[i].id!= id) novo.push(desabafos[i]);
+    }
+    desabafos = novo;
+    salvarLocal();
+    carregar();
+  }
+}
+
+carregar();
+</script>
+</body>
+</html>
